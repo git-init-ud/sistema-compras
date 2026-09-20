@@ -4,6 +4,11 @@ Tres APIs REST con Node.js y Express: `cliente-api`, `producto-api` y `compra-ap
 una compra, `compra-api` valida contra las otras dos que el cliente y el producto existan, y que
 haya stock suficiente.
 
+**Autores:** 
+- Jhojan Stiven Aragón Ramírez
+- Yader Ibraldo Quiroga Torres
+- Kevin Emmanuel Tovar Lizarazo
+
 ## Servicios
 
 | Servicio      | Puerto | Recurso     |
