@@ -7,7 +7,10 @@
   "variable": [
     { "key": "clienteApiUrl", "value": "http://localhost:3001" },
     { "key": "productoApiUrl", "value": "http://localhost:3002" },
-    { "key": "compraApiUrl", "value": "http://localhost:3003" }
+    { "key": "compraApiUrl", "value": "http://localhost:3003" },
+    { "key": "clienteIdLaura", "value": "44bb26f4-6da4-4153-8d21-2f288c4af537" },
+    { "key": "clienteIdAndres", "value": "664bd043-0dcb-4777-b44f-589bc9c75295" },
+    { "key": "clienteIdInexistente", "value": "00000000-0000-0000-0000-000000000000" }
   ],
   "item": [
     {
@@ -24,7 +27,7 @@
           "name": "Obtener cliente por id",
           "request": {
             "method": "GET",
-            "url": "{{clienteApiUrl}}/clientes/1"
+            "url": "{{clienteApiUrl}}/clientes/{{clienteIdLaura}}"
           }
         },
         {
@@ -96,7 +99,7 @@
             "header": [{ "key": "Content-Type", "value": "application/json" }],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"clienteId\": 1,\n  \"productoId\": 2,\n  \"cantidad\": 3\n}"
+              "raw": "{\n  \"clienteId\": \"{{clienteIdLaura}}\",\n  \"productoId\": 2,\n  \"cantidad\": 3\n}"
             },
             "url": "{{compraApiUrl}}/compras"
           }
@@ -108,7 +111,7 @@
             "header": [{ "key": "Content-Type", "value": "application/json" }],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"clienteId\": 99,\n  \"productoId\": 1,\n  \"cantidad\": 1\n}"
+              "raw": "{\n  \"clienteId\": \"{{clienteIdInexistente}}\",\n  \"productoId\": 1,\n  \"cantidad\": 1\n}"
             },
             "url": "{{compraApiUrl}}/compras"
           }
@@ -120,7 +123,7 @@
             "header": [{ "key": "Content-Type", "value": "application/json" }],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"clienteId\": 1,\n  \"productoId\": 99,\n  \"cantidad\": 1\n}"
+              "raw": "{\n  \"clienteId\": \"{{clienteIdLaura}}\",\n  \"productoId\": 99,\n  \"cantidad\": 1\n}"
             },
             "url": "{{compraApiUrl}}/compras"
           }
@@ -132,7 +135,7 @@
             "header": [{ "key": "Content-Type", "value": "application/json" }],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"clienteId\": 1,\n  \"productoId\": 1,\n  \"cantidad\": 999\n}"
+              "raw": "{\n  \"clienteId\": \"{{clienteIdLaura}}\",\n  \"productoId\": 1,\n  \"cantidad\": 999\n}"
             },
             "url": "{{compraApiUrl}}/compras"
           }
@@ -144,7 +147,7 @@
             "header": [{ "key": "Content-Type", "value": "application/json" }],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"clienteId\": 1,\n  \"productoId\": 1,\n  \"cantidad\": 1\n}"
+              "raw": "{\n  \"clienteId\": \"{{clienteIdLaura}}\",\n  \"productoId\": 1,\n  \"cantidad\": 1\n}"
             },
             "url": "{{compraApiUrl}}/compras"
           }
