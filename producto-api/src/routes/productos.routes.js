@@ -1,28 +1,46 @@
 const express = require("express");
 const router = express.Router();
-const productos = require("../data/productos");
+const db = require("../db");
 
-let siguienteId = 3;
+// numeric comes back from pg as a string, so cast it to a JS number in SQL
+const COLUMNAS = "id, nombre, precio::float8 AS precio, stock";
 
 // GET /productos
-router.get("/", (req, res) => {
-  res.status(200).json(productos);
+router.get("/", async (req, res, next) => {
+  try {
+    const { rows } = await db.query(`SELECT ${COLUMNAS} FROM productos ORDER BY id`);
+    res.status(200).json(rows);
+  } catch (error) {
+    next(error);
+  }
 });
 
 // GET /productos/:id
-router.get("/:id", (req, res) => {
+router.get("/:id", async (req, res, next) => {
   const id = Number(req.params.id);
-  const producto = productos.find((producto) => producto.id === id);
 
-  if (!producto) {
+  if (!Number.isInteger(id)) {
     return res.status(404).json({ mensaje: "Producto no encontrado" });
   }
 
-  res.status(200).json(producto);
+  try {
+    const { rows } = await db.query(
+      `SELECT ${COLUMNAS} FROM productos WHERE id = $1`,
+      [id]
+    );
+
+    if (rows.length === 0) {
+      return res.status(404).json({ mensaje: "Producto no encontrado" });
+    }
+
+    res.status(200).json(rows[0]);
+  } catch (error) {
+    next(error);
+  }
 });
 
 // POST /productos
-router.post("/", (req, res) => {
+router.post("/", async (req, res, next) => {
   const { nombre, precio, stock } = req.body;
 
   if (!nombre || precio === undefined || stock === undefined) {
@@ -31,9 +49,20 @@ router.post("/", (req, res) => {
     });
   }
 
-  const nuevoProducto = { id: siguienteId++, nombre, precio, stock };
-  productos.push(nuevoProducto);
-  res.status(201).json(nuevoProducto);
+  try {
+    const { rows } = await db.query(
+      `INSERT INTO productos (nombre, precio, stock) VALUES ($1, $2, $3) RETURNING ${COLUMNAS}`,
+      [nombre, precio, stock]
+    );
+    res.status(201).json(rows[0]);
+  } catch (error) {
+    if (error.code === "23514") {
+      return res
+        .status(400)
+        .json({ mensaje: "'precio' y 'stock' no pueden ser negativos" });
+    }
+    next(error);
+  }
 });
 
 module.exports = router;
