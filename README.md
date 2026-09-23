@@ -57,3 +57,15 @@ servicio caído (con `producto-api` detenida).
   consultar al otro servicio".
 - El total de la compra se calcula con el precio que devuelve `producto-api`, nunca con un valor
   enviado por el cliente de la API.
+
+## Base de datos local (PostgreSQL)
+
+Un solo clúster local con la base `compras_db` y tres tablas: `clientes` (id UUID), `productos` y `compras` (ids incrementales). `compras` no tiene FK a propósito: `compra-api` valida cliente y producto por HTTP.
+
+```bash
+db/setup-local-db.sh                                   # crea el clúster en db/pgdata, puerto 5440, aplica schema y seed
+psql -h 127.0.0.1 -p 5440 -U postgres -d compras_db    # entrar
+pg_ctl -D db/pgdata stop                               # apagar
+```
+
+Cada API lee `DATABASE_URL` (ver `.env.example`).
