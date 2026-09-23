@@ -1,30 +1,45 @@
 const express = require("express");
 const router = express.Router();
-const compras = require("../data/compras");
+const db = require("../db");
 const { obtenerCliente } = require("../services/clienteService");
 const { obtenerProducto } = require("../services/productoService");
 
-let siguienteId = 1;
+const COLUMNAS =
+  "id, cliente_id AS \"clienteId\", producto_id AS \"productoId\", cantidad, total::float8 AS total, fecha";
 
 // GET /compras
-router.get("/", (req, res) => {
-  res.status(200).json(compras);
+router.get("/", async (req, res, next) => {
+  try {
+    const { rows } = await db.query(`SELECT ${COLUMNAS} FROM compras ORDER BY id`);
+    res.status(200).json(rows);
+  } catch (error) {
+    next(error);
+  }
 });
 
 // GET /compras/:id
-router.get("/:id", (req, res) => {
+router.get("/:id", async (req, res, next) => {
   const id = Number(req.params.id);
-  const compra = compras.find((compra) => compra.id === id);
 
-  if (!compra) {
+  if (!Number.isInteger(id)) {
     return res.status(404).json({ mensaje: "Compra no encontrada" });
   }
 
-  res.status(200).json(compra);
+  try {
+    const { rows } = await db.query(`SELECT ${COLUMNAS} FROM compras WHERE id = $1`, [id]);
+
+    if (rows.length === 0) {
+      return res.status(404).json({ mensaje: "Compra no encontrada" });
+    }
+
+    res.status(200).json(rows[0]);
+  } catch (error) {
+    next(error);
+  }
 });
 
 // POST /compras
-router.post("/", async (req, res) => {
+router.post("/", async (req, res, next) => {
   const { clienteId, productoId, cantidad } = req.body;
 
   if (!clienteId || !productoId || !cantidad) {
@@ -60,17 +75,16 @@ router.post("/", async (req, res) => {
     });
   }
 
-  const nuevaCompra = {
-    id: siguienteId++,
-    clienteId,
-    productoId,
-    cantidad,
-    total: producto.precio * cantidad,
-    fecha: new Date().toISOString()
-  };
-
-  compras.push(nuevaCompra);
-  res.status(201).json(nuevaCompra);
+  try {
+    const { rows } = await db.query(
+      `INSERT INTO compras (cliente_id, producto_id, cantidad, total)
+       VALUES ($1, $2, $3, $4) RETURNING ${COLUMNAS}`,
+      [cliente.id, producto.id, cantidad, producto.precio * cantidad]
+    );
+    res.status(201).json(rows[0]);
+  } catch (error) {
+    next(error);
+  }
 });
 
 module.exports = router;
