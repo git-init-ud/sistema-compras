@@ -1,0 +1,55 @@
+services:
+  compra-api:
+    build:
+      context: ./compra-api
+      dockerfile: dockerfile
+    container_name: compra-api
+    ports:
+      - "3003:3003"
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-admin}:${POSTGRES_PASSWORD:-admin}@${POSTGRES_DB:-compra_db}:5432/${POSTGRES_DB:-sistemas_compras}
+    networks:
+      - compra-network
+  producto-api:
+    build:
+      context: ./producto-api
+      dockerfile: dockerfile
+    container_name: producto-api
+    ports:
+      - "3002:3002"
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-admin}:${POSTGRES_PASSWORD:-admin}@db:5432/${POSTGRES_DB:-sistemas_compras}
+    networks:
+      - compra-network
+  cliente-api:
+    build:
+      context: ./cliente-api
+      dockerfile: dockerfile
+    container_name: cliente-api
+    ports:
+      - "3001:3001"
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-admin}:${POSTGRES_PASSWORD:-admin}@db:5432/${POSTGRES_DB:-sistemas_compras}
+    networks:
+      - compra-network
+  db:
+    image: postgres:16
+    container_name: db
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-admin}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-admin}
+      POSTGRES_DB: ${POSTGRES_DB:-compra_db}
+    ports:
+      - "5433:5432"
+    networks:
+      - compra-network
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./init/init.sql:/docker-entrypoint-initdb.d/init.sql
+
+networks:
+  compra-network:
+    driver: bridge
+
+volumes:
+  postgres_data:
