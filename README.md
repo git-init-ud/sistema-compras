@@ -60,12 +60,28 @@ servicio caído (con `producto-api` detenida).
 
 ## Base de datos local (PostgreSQL)
 
-Un solo clúster local con la base `compras_db` y tres tablas: `clientes` (id UUID), `productos` y `compras` (ids incrementales). `compras` no tiene FK a propósito: `compra-api` valida cliente y producto por HTTP.
+Un solo clúster local (sin Docker) con la base `compras_db` y tres tablas: `clientes` (id UUID), `productos` y `compras` (ids incrementales). `compras` no tiene FK a propósito: `compra-api` valida cliente y producto por HTTP.
 
 ```bash
-db/setup-local-db.sh                                   # crea el clúster en db/pgdata, puerto 5440, aplica schema y seed
-psql -h 127.0.0.1 -p 5440 -U postgres -d compras_db    # entrar
-pg_ctl -D db/pgdata stop                               # apagar
+# macOS (requiere PostgreSQL: brew install postgresql@18)
+db/setup-local-db-mac.sh                               # clúster en db/pgdata, puerto 5440, schema + seed
+db/setup-local-db-mac.sh stop                          # apagar
+
+# Linux
+db/setup-local-db.sh
 ```
+
+```powershell
+# Windows, en PowerShell normal (no usar "Run as administrator")
+powershell -ExecutionPolicy Bypass -File db\setup-local-db-windows.ps1
+powershell -ExecutionPolicy Bypass -File db\setup-local-db-windows.ps1 stop
+```
+
+```bash
+psql -h 127.0.0.1 -p 5440 -U postgres -d compras_db    # entrar
+```
+
+Si los scripts no están disponibles o fallan, el procedimiento manual paso a paso está en
+[`db/README.md`](db/README.md).
 
 Cada API lee `DATABASE_URL` (ver `.env.example`).
