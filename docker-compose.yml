@@ -7,7 +7,14 @@ services:
     ports:
       - "3003:3003"
     environment:
-      DATABASE_URL: postgresql://${POSTGRES_USER:-admin}:${POSTGRES_PASSWORD:-admin}@${POSTGRES_DB:-compra_db}:5432/${POSTGRES_DB:-sistemas_compras}
+      PORT: 3003
+      DATABASE_URL: postgresql://${POSTGRES_USER:-admin}:${POSTGRES_PASSWORD:-admin}@db:5432/${POSTGRES_DB:-compra_db}
+      CLIENTE_API_URL: http://cliente-api:3001
+      PRODUCTO_API_URL: http://producto-api:3002
+    depends_on:
+      - db
+      - cliente-api
+      - producto-api
     networks:
       - compra-network
   producto-api:
@@ -18,7 +25,10 @@ services:
     ports:
       - "3002:3002"
     environment:
-      DATABASE_URL: postgresql://${POSTGRES_USER:-admin}:${POSTGRES_PASSWORD:-admin}@db:5432/${POSTGRES_DB:-sistemas_compras}
+      PORT: 3002
+      DATABASE_URL: postgresql://${POSTGRES_USER:-admin}:${POSTGRES_PASSWORD:-admin}@db:5432/${POSTGRES_DB:-compra_db}
+    depends_on:
+      - db
     networks:
       - compra-network
   cliente-api:
@@ -29,7 +39,10 @@ services:
     ports:
       - "3001:3001"
     environment:
-      DATABASE_URL: postgresql://${POSTGRES_USER:-admin}:${POSTGRES_PASSWORD:-admin}@db:5432/${POSTGRES_DB:-sistemas_compras}
+      PORT: 3001
+      DATABASE_URL: postgresql://${POSTGRES_USER:-admin}:${POSTGRES_PASSWORD:-admin}@db:5432/${POSTGRES_DB:-compra_db}
+    depends_on:
+      - db
     networks:
       - compra-network
   db:
