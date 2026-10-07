@@ -4,8 +4,9 @@ Tres APIs REST con Node.js y Express: `cliente-api`, `producto-api` y `compra-ap
 una compra, `compra-api` valida contra las otras dos que el cliente y el producto existan, y que
 haya stock suficiente.
 
-La capa de datos usa **Sequelize v6** sobre PostgreSQL: cada servicio define sus modelos en
-`src/models/` y su conexión en `src/db.js`.
+La capa de datos usa **Sequelize v6** sobre PostgreSQL. Cada servicio separa sus rutas
+(`src/routes/`), controladores (`src/controllers/`) y modelos (`src/models/`), con la conexión
+a la base en `src/config/database.js`.
 
 **Autores:** 
 - Jhojan Stiven Aragón Ramírez
@@ -83,7 +84,7 @@ servicio caído (con `producto-api` detenida).
 
 ## Base de datos local (PostgreSQL)
 
-Un solo clúster local (sin Docker) con la base `compras_db` y tres tablas: `clientes` (id UUID), `productos` y `compras` (ids incrementales). `compras` no tiene FK a propósito: `compra-api` valida cliente y producto por HTTP.
+Un solo clúster local (sin Docker) con la base `compras_db` y tres tablas: `clientes` (id UUID), `productos` y `compras` (ids incrementales). `compras` tiene FK a `clientes` y `productos` (ON DELETE RESTRICT), aunque `compra-api` valida cliente y producto por HTTP antes de insertar.
 
 ```bash
 # macOS (requiere PostgreSQL: brew install postgresql@18)
@@ -108,5 +109,5 @@ Si los scripts no están disponibles o fallan, el procedimiento manual paso a pa
 [`db/README.md`](db/README.md).
 
 Cada API lee `DATABASE_URL` (ver `.env.example`). Los modelos de Sequelize viven en `src/models/`
-de cada servicio (la conexión, en `src/db.js`). Para ver en consola el SQL que genera el ORM,
+de cada servicio (la conexión, en `src/config/database.js`). Para ver en consola el SQL que genera el ORM,
 agrega `DB_LOGGING=true` al `.env`.

@@ -79,19 +79,24 @@ const updateCliente = async (req, res, next) => {
         .json({ mensaje: "Los campos 'nombre' y 'email' son obligatorios" });
     }
 
-    const { rows } = await db.query(
-      "UPDATE clientes SET nombre = $1, email = $2 WHERE id = $3 RETURNING id, nombre, email",
-      [nombre, email, req.params.id]
-    );
+    const cliente = await Cliente.findByPk(req.params.id, { attributes: CAMPOS });
 
-    if (rows.length === 0) {
+    if (!cliente) {
       return res.status(404).json({ mensaje: "Cliente no encontrado" });
     }
 
-    res.status(200).json(rows[0]);
+    await cliente.update({ nombre, email });
+
+    res.status(200).json({
+      id: cliente.id,
+      nombre: cliente.nombre,
+      email: cliente.email
+    });
   } catch (error) {
-    if (error.code === "23505") {
-      return res.status(409).json({ mensaje: `El email ${req.body.email} ya está registrado` });
+    if (error.name === "SequelizeUniqueConstraintError") {
+      return res
+        .status(409)
+        .json({ mensaje: `El email ${req.body.email} ya está registrado` });
     }
     next(error);
   }
@@ -103,18 +108,18 @@ const deleteCliente = async (req, res, next) => {
       return res.status(404).json({ mensaje: "Cliente no encontrado" });
     }
 
-    const { rows } = await db.query(
-      "DELETE FROM clientes WHERE id = $1 RETURNING id",
-      [req.params.id]
-    );
+    const cliente = await Cliente.findByPk(req.params.id);
 
-    if (rows.length === 0) {
+    if (!cliente) {
       return res.status(404).json({ mensaje: "Cliente no encontrado" });
     }
 
+    await cliente.destroy();
+
     res.status(200).json({ mensaje: "Cliente eliminado" });
   } catch (error) {
-    if (error.code === "23503") {
+    // 23001 = RESTRICT, 23503 = violación de FK en general
+    if (error.original?.code === "23001" || error.original?.code === "23503") {
       return res.status(409).json({ mensaje: "No se puede eliminar: el cliente tiene compras asociadas" });
     }
     next(error);

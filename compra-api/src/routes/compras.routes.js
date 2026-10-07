@@ -1,175 +1,24 @@
 const express = require("express");
 const router = express.Router();
-const Compra = require("../models/Compra");
-const { obtenerCliente } = require("../services/clienteService");
-const { obtenerProducto } = require("../services/productoService");
+const getCompras = require("../controllers/compraController").getCompras;
+const getCompraById = require("../controllers/compraController").getCompraById;
+const createCompra = require("../controllers/compraController").createCompra;
+const updateCompra = require("../controllers/compraController").updateCompra;
+const deleteCompra = require("../controllers/compraController").deleteCompra;
 
 // GET /compras
-router.get("/", async (req, res, next) => {
-  try {
-    const compras = await Compra.findAll({ order: [["id", "ASC"]] });
-    res.status(200).json(compras);
-  } catch (error) {
-    next(error);
-  }
-});
+router.get("/", getCompras);
 
 // GET /compras/:id
-router.get("/:id", async (req, res, next) => {
-  const id = Number(req.params.id);
-
-  if (!Number.isInteger(id)) {
-    return res.status(404).json({ mensaje: "Compra no encontrada" });
-  }
-
-  try {
-    const compra = await Compra.findByPk(id);
-
-    if (!compra) {
-      return res.status(404).json({ mensaje: "Compra no encontrada" });
-    }
-
-    res.status(200).json(compra);
-  } catch (error) {
-    next(error);
-  }
-});
+router.get("/:id", getCompraById);
 
 // POST /compras
-router.post("/", async (req, res, next) => {
-  const { clienteId, productoId, cantidad } = req.body;
-
-  if (!clienteId || !productoId || !cantidad) {
-    return res.status(400).json({
-      mensaje: "Los campos 'clienteId', 'productoId' y 'cantidad' son obligatorios"
-    });
-  }
-
-  let cliente;
-  let producto;
-
-  try {
-    cliente = await obtenerCliente(clienteId);
-    producto = await obtenerProducto(productoId);
-  } catch (error) {
-    return res.status(503).json({
-      mensaje: "No se pudo validar la compra porque uno de los servicios no respondió",
-      detalle: error.message
-    });
-  }
-
-  if (!cliente) {
-    return res.status(404).json({ mensaje: `El cliente ${clienteId} no existe` });
-  }
-
-  if (!producto) {
-    return res.status(404).json({ mensaje: `El producto ${productoId} no existe` });
-  }
-
-  if (producto.stock < cantidad) {
-    return res.status(400).json({
-      mensaje: `Stock insuficiente. Disponible: ${producto.stock}, solicitado: ${cantidad}`
-    });
-  }
-
-  try {
-    const compra = await Compra.create(
-      {
-        clienteId: cliente.id,
-        productoId: producto.id,
-        cantidad,
-        total: producto.precio * cantidad
-      },
-      { returning: true }
-    );
-    res.status(201).json(compra);
-  } catch (error) {
-    next(error);
-  }
-});
+router.post("/", createCompra);
 
 // PUT /compras/:id
-router.put("/:id", async (req, res, next) => {
-  const id = Number(req.params.id);
-
-  if (!Number.isInteger(id)) {
-    return res.status(404).json({ mensaje: "Compra no encontrada" });
-  }
-
-  const { clienteId, productoId, cantidad } = req.body;
-
-  if (!clienteId || !productoId || !cantidad) {
-    return res.status(400).json({
-      mensaje: "Los campos 'clienteId', 'productoId' y 'cantidad' son obligatorios"
-    });
-  }
-
-  let cliente;
-  let producto;
-
-  try {
-    cliente = await obtenerCliente(clienteId);
-    producto = await obtenerProducto(productoId);
-  } catch (error) {
-    return res.status(503).json({
-      mensaje: "No se pudo validar la compra porque uno de los servicios no respondió",
-      detalle: error.message
-    });
-  }
-
-  if (!cliente) {
-    return res.status(404).json({ mensaje: `El cliente ${clienteId} no existe` });
-  }
-
-  if (!producto) {
-    return res.status(404).json({ mensaje: `El producto ${productoId} no existe` });
-  }
-
-  if (producto.stock < cantidad) {
-    return res.status(400).json({
-      mensaje: `Stock insuficiente. Disponible: ${producto.stock}, solicitado: ${cantidad}`
-    });
-  }
-
-  try {
-    const { rows } = await db.query(
-      `UPDATE compras SET cliente_id = $1, producto_id = $2, cantidad = $3, total = $4
-       WHERE id = $5 RETURNING ${COLUMNAS}`,
-      [cliente.id, producto.id, cantidad, producto.precio * cantidad, id]
-    );
-
-    if (rows.length === 0) {
-      return res.status(404).json({ mensaje: "Compra no encontrada" });
-    }
-
-    res.status(200).json(rows[0]);
-  } catch (error) {
-    next(error);
-  }
-});
+router.put("/:id", updateCompra);
 
 // DELETE /compras/:id
-router.delete("/:id", async (req, res, next) => {
-  const id = Number(req.params.id);
-
-  if (!Number.isInteger(id)) {
-    return res.status(404).json({ mensaje: "Compra no encontrada" });
-  }
-
-  try {
-    const { rows } = await db.query(
-      "DELETE FROM compras WHERE id = $1 RETURNING id",
-      [id]
-    );
-
-    if (rows.length === 0) {
-      return res.status(404).json({ mensaje: "Compra no encontrada" });
-    }
-
-    res.status(200).json({ mensaje: "Compra eliminada" });
-  } catch (error) {
-    next(error);
-  }
-});
+router.delete("/:id", deleteCompra);
 
 module.exports = router;
