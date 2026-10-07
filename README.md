@@ -4,6 +4,9 @@ Tres APIs REST con Node.js y Express: `cliente-api`, `producto-api` y `compra-ap
 una compra, `compra-api` valida contra las otras dos que el cliente y el producto existan, y que
 haya stock suficiente.
 
+La capa de datos usa **Sequelize v6** sobre PostgreSQL: cada servicio define sus modelos en
+`src/models/` y su conexión en `src/db.js`.
+
 **Autores:** 
 - Jhojan Stiven Aragón Ramírez
 - Yader Ibraldo Quiroga Torres
@@ -104,4 +107,6 @@ psql -h 127.0.0.1 -p 5440 -U postgres -d compras_db    # entrar
 Si los scripts no están disponibles o fallan, el procedimiento manual paso a paso está en
 [`db/README.md`](db/README.md).
 
-Cada API lee `DATABASE_URL` (ver `.env.example`).
+Cada API lee `DATABASE_URL` (ver `.env.example`). Los modelos de Sequelize viven en `src/models/`
+de cada servicio (la conexión, en `src/db.js`). Para ver en consola el SQL que genera el ORM,
+agrega `DB_LOGGING=true` al `.env`.

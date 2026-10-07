@@ -15,7 +15,8 @@
   "dependencies": {
     "dotenv": "^17.4.2",
     "express": "^5.2.1",
-    "pg": "^8.23.0"
+    "pg": "^8.23.0",
+    "sequelize": "^6.37.8"
   },
   "devDependencies": {
     "nodemon": "^3.1.14"

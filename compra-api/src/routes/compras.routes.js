@@ -1,17 +1,14 @@
 const express = require("express");
 const router = express.Router();
-const db = require("../db");
+const Compra = require("../models/Compra");
 const { obtenerCliente } = require("../services/clienteService");
 const { obtenerProducto } = require("../services/productoService");
-
-const COLUMNAS =
-  "id, cliente_id AS \"clienteId\", producto_id AS \"productoId\", cantidad, total::float8 AS total, fecha";
 
 // GET /compras
 router.get("/", async (req, res, next) => {
   try {
-    const { rows } = await db.query(`SELECT ${COLUMNAS} FROM compras ORDER BY id`);
-    res.status(200).json(rows);
+    const compras = await Compra.findAll({ order: [["id", "ASC"]] });
+    res.status(200).json(compras);
   } catch (error) {
     next(error);
   }
@@ -26,13 +23,13 @@ router.get("/:id", async (req, res, next) => {
   }
 
   try {
-    const { rows } = await db.query(`SELECT ${COLUMNAS} FROM compras WHERE id = $1`, [id]);
+    const compra = await Compra.findByPk(id);
 
-    if (rows.length === 0) {
+    if (!compra) {
       return res.status(404).json({ mensaje: "Compra no encontrada" });
     }
 
-    res.status(200).json(rows[0]);
+    res.status(200).json(compra);
   } catch (error) {
     next(error);
   }
@@ -76,12 +73,16 @@ router.post("/", async (req, res, next) => {
   }
 
   try {
-    const { rows } = await db.query(
-      `INSERT INTO compras (cliente_id, producto_id, cantidad, total)
-       VALUES ($1, $2, $3, $4) RETURNING ${COLUMNAS}`,
-      [cliente.id, producto.id, cantidad, producto.precio * cantidad]
+    const compra = await Compra.create(
+      {
+        clienteId: cliente.id,
+        productoId: producto.id,
+        cantidad,
+        total: producto.precio * cantidad
+      },
+      { returning: true }
     );
-    res.status(201).json(rows[0]);
+    res.status(201).json(compra);
   } catch (error) {
     next(error);
   }

@@ -1,16 +1,18 @@
 const express = require("express");
 const router = express.Router();
-const db = require("../db");
+const Cliente = require("../models/Cliente");
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const CAMPOS = ["id", "nombre", "email"];
 
 // GET /clientes
 router.get("/", async (req, res, next) => {
   try {
-    const { rows } = await db.query(
-      "SELECT id, nombre, email FROM clientes ORDER BY created_at"
-    );
-    res.status(200).json(rows);
+    const clientes = await Cliente.findAll({
+      attributes: CAMPOS,
+      order: [["created_at", "ASC"]]
+    });
+    res.status(200).json(clientes);
   } catch (error) {
     next(error);
   }
@@ -23,16 +25,15 @@ router.get("/:id", async (req, res, next) => {
       return res.status(404).json({ mensaje: "Cliente no encontrado" });
     }
 
-    const { rows } = await db.query(
-      "SELECT id, nombre, email FROM clientes WHERE id = $1",
-      [req.params.id]
-    );
+    const cliente = await Cliente.findByPk(req.params.id, {
+      attributes: CAMPOS
+    });
 
-    if (rows.length === 0) {
+    if (!cliente) {
       return res.status(404).json({ mensaje: "Cliente no encontrado" });
     }
 
-    res.status(200).json(rows[0]);
+    res.status(200).json(cliente);
   } catch (error) {
     next(error);
   }
@@ -49,14 +50,17 @@ router.post("/", async (req, res, next) => {
   }
 
   try {
-    const { rows } = await db.query(
-      "INSERT INTO clientes (nombre, email) VALUES ($1, $2) RETURNING id, nombre, email",
-      [nombre, email]
-    );
-    res.status(201).json(rows[0]);
+    const cliente = await Cliente.create({ nombre, email }, { returning: true });
+    res.status(201).json({
+      id: cliente.id,
+      nombre: cliente.nombre,
+      email: cliente.email
+    });
   } catch (error) {
-    if (error.code === "23505") {
-      return res.status(409).json({ mensaje: `El email ${email} ya está registrado` });
+    if (error.name === "SequelizeUniqueConstraintError") {
+      return res
+        .status(409)
+        .json({ mensaje: `El email ${email} ya está registrado` });
     }
     next(error);
   }

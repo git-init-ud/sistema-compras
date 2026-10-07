@@ -1,15 +1,17 @@
 const express = require("express");
 const router = express.Router();
-const db = require("../db");
+const Producto = require("../models/Producto");
 
-// numeric comes back from pg as a string, so cast it to a JS number in SQL
-const COLUMNAS = "id, nombre, precio::float8 AS precio, stock";
+const CAMPOS = ["id", "nombre", "precio", "stock"];
 
 // GET /productos
 router.get("/", async (req, res, next) => {
   try {
-    const { rows } = await db.query(`SELECT ${COLUMNAS} FROM productos ORDER BY id`);
-    res.status(200).json(rows);
+    const productos = await Producto.findAll({
+      attributes: CAMPOS,
+      order: [["id", "ASC"]]
+    });
+    res.status(200).json(productos);
   } catch (error) {
     next(error);
   }
@@ -24,16 +26,13 @@ router.get("/:id", async (req, res, next) => {
   }
 
   try {
-    const { rows } = await db.query(
-      `SELECT ${COLUMNAS} FROM productos WHERE id = $1`,
-      [id]
-    );
+    const producto = await Producto.findByPk(id, { attributes: CAMPOS });
 
-    if (rows.length === 0) {
+    if (!producto) {
       return res.status(404).json({ mensaje: "Producto no encontrado" });
     }
 
-    res.status(200).json(rows[0]);
+    res.status(200).json(producto);
   } catch (error) {
     next(error);
   }
@@ -50,13 +49,18 @@ router.post("/", async (req, res, next) => {
   }
 
   try {
-    const { rows } = await db.query(
-      `INSERT INTO productos (nombre, precio, stock) VALUES ($1, $2, $3) RETURNING ${COLUMNAS}`,
-      [nombre, precio, stock]
+    const producto = await Producto.create(
+      { nombre, precio, stock },
+      { returning: true }
     );
-    res.status(201).json(rows[0]);
+    res.status(201).json({
+      id: producto.id,
+      nombre: producto.nombre,
+      precio: producto.precio,
+      stock: producto.stock
+    });
   } catch (error) {
-    if (error.code === "23514") {
+    if (error.original?.code === "23514") {
       return res
         .status(400)
         .json({ mensaje: "'precio' y 'stock' no pueden ser negativos" });
