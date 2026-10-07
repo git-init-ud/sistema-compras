@@ -45,6 +45,26 @@ npm run dev
 `compra-api` lee las URLs de `cliente-api` y `producto-api` desde variables de entorno
 (`CLIENTE_API_URL`, `PRODUCTO_API_URL`), nunca las tiene fijas en el código.
 
+## Correr con Docker
+
+Levanta las tres APIs y Postgres con un solo comando, sin instalar Node ni Postgres:
+
+```bash
+docker compose up -d --build
+docker compose ps                  # los 4 servicios deben quedar "healthy"
+docker compose logs -f compra-api
+docker compose down                # parar conservando los datos
+docker compose down -v             # parar y borrar la base (init.sql se vuelve a aplicar)
+```
+
+- Las APIs quedan en `localhost:3001`, `3002` y `3003`. Postgres solo es accesible desde tu
+  máquina en `127.0.0.1:5433` (`admin` / `admin`, base `compra_db`).
+- `init/init.sql` crea las tablas y carga datos de ejemplo la primera vez, cuando el volumen
+  `postgres_data` está vacío. Si cambias el esquema hay que usar `docker compose down -v`.
+- Si el puerto 5433 ya está ocupado en tu máquina, cambia el mapeo `127.0.0.1:5433:5432` del
+  servicio `db` en `docker-compose.yml`.
+- Las imágenes corren como usuario `node` (no root) sobre `node:24-alpine`, con healthcheck.
+
 ## Pruebas
 
 Colección de Postman en `postman/sistema-compras.postman_collection.json`. Importarla y usar las

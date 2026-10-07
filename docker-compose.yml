@@ -1,51 +1,72 @@
+x-db-url: &db-url postgresql://${POSTGRES_USER:-admin}:${POSTGRES_PASSWORD:-admin}@db:5432/${POSTGRES_DB:-compra_db}
+
 services:
-  compra-api:
-    build:
-      context: ./compra-api
-      dockerfile: dockerfile
-    container_name: compra-api
-    ports:
-      - "3003:3003"
-    environment:
-      DATABASE_URL: postgresql://${POSTGRES_USER:-admin}:${POSTGRES_PASSWORD:-admin}@${POSTGRES_DB:-compra_db}:5432/${POSTGRES_DB:-sistemas_compras}
-    networks:
-      - compra-network
-  producto-api:
-    build:
-      context: ./producto-api
-      dockerfile: dockerfile
-    container_name: producto-api
-    ports:
-      - "3002:3002"
-    environment:
-      DATABASE_URL: postgresql://${POSTGRES_USER:-admin}:${POSTGRES_PASSWORD:-admin}@db:5432/${POSTGRES_DB:-sistemas_compras}
-    networks:
-      - compra-network
-  cliente-api:
-    build:
-      context: ./cliente-api
-      dockerfile: dockerfile
-    container_name: cliente-api
-    ports:
-      - "3001:3001"
-    environment:
-      DATABASE_URL: postgresql://${POSTGRES_USER:-admin}:${POSTGRES_PASSWORD:-admin}@db:5432/${POSTGRES_DB:-sistemas_compras}
-    networks:
-      - compra-network
   db:
-    image: postgres:16
-    container_name: db
+    image: postgres:16-alpine
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-admin}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-admin}
       POSTGRES_DB: ${POSTGRES_DB:-compra_db}
     ports:
-      - "5433:5432"
-    networks:
-      - compra-network
+      - "127.0.0.1:5433:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
-      - ./init/init.sql:/docker-entrypoint-initdb.d/init.sql
+      - ./init/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    restart: unless-stopped
+    networks: [compra-network]
+
+  cliente-api:
+    build: ./cliente-api
+    init: true
+    ports:
+      - "3001:3001"
+    environment:
+      PORT: 3001
+      DATABASE_URL: *db-url
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+    networks: [compra-network]
+
+  producto-api:
+    build: ./producto-api
+    init: true
+    ports:
+      - "3002:3002"
+    environment:
+      PORT: 3002
+      DATABASE_URL: *db-url
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+    networks: [compra-network]
+
+  compra-api:
+    build: ./compra-api
+    init: true
+    ports:
+      - "3003:3003"
+    environment:
+      PORT: 3003
+      DATABASE_URL: *db-url
+      CLIENTE_API_URL: http://cliente-api:3001
+      PRODUCTO_API_URL: http://producto-api:3002
+    depends_on:
+      db:
+        condition: service_healthy
+      cliente-api:
+        condition: service_healthy
+      producto-api:
+        condition: service_healthy
+    restart: unless-stopped
+    networks: [compra-network]
 
 networks:
   compra-network:
