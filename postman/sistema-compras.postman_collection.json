@@ -8,8 +8,8 @@
     { "key": "clienteApiUrl", "value": "http://localhost:3001" },
     { "key": "productoApiUrl", "value": "http://localhost:3002" },
     { "key": "compraApiUrl", "value": "http://localhost:3003" },
-    { "key": "clienteIdLaura", "value": "44bb26f4-6da4-4153-8d21-2f288c4af537" },
-    { "key": "clienteIdAndres", "value": "664bd043-0dcb-4777-b44f-589bc9c75295" },
+    { "key": "clienteIdLaura", "value": "84902063-cc7d-49fc-8ae2-78ae2d8cacf7" },
+    { "key": "clienteIdAndres", "value": "240d2578-b3a3-4c4a-bfcf-732b97d35bce" },
     { "key": "clienteIdInexistente", "value": "00000000-0000-0000-0000-000000000000" }
   ],
   "item": [
@@ -41,6 +41,25 @@
             },
             "url": "{{clienteApiUrl}}/clientes"
           }
+        },
+        {
+          "name": "Actualizar cliente",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nombre\": \"Andrés Ruiz Actualizado\",\n  \"email\": \"andres.ruiz@example.com\"\n}"
+            },
+            "url": "{{clienteApiUrl}}/clientes/{{clienteIdAndres}}"
+          }
+        },
+        {
+          "name": "Eliminar cliente",
+          "request": {
+            "method": "DELETE",
+            "url": "{{clienteApiUrl}}/clientes/{{clienteIdAndres}}"
+          }
         }
       ]
     },
@@ -71,6 +90,25 @@
               "raw": "{\n  \"nombre\": \"Monitor 24 pulgadas\",\n  \"precio\": 520000,\n  \"stock\": 8\n}"
             },
             "url": "{{productoApiUrl}}/productos"
+          }
+        },
+        {
+          "name": "Actualizar producto",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nombre\": \"Teclado mecánico\",\n  \"precio\": 170000,\n  \"stock\": 20\n}"
+            },
+            "url": "{{productoApiUrl}}/productos/1"
+          }
+        },
+        {
+          "name": "Eliminar producto",
+          "request": {
+            "method": "DELETE",
+            "url": "{{productoApiUrl}}/productos/1"
           }
         }
       ]
@@ -150,6 +188,25 @@
               "raw": "{\n  \"clienteId\": \"{{clienteIdLaura}}\",\n  \"productoId\": 1,\n  \"cantidad\": 1\n}"
             },
             "url": "{{compraApiUrl}}/compras"
+          }
+        },
+        {
+          "name": "Actualizar compra",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"clienteId\": \"{{clienteIdLaura}}\",\n  \"productoId\": 2,\n  \"cantidad\": 2\n}"
+            },
+            "url": "{{compraApiUrl}}/compras/1"
+          }
+        },
+        {
+          "name": "Eliminar compra",
+          "request": {
+            "method": "DELETE",
+            "url": "{{compraApiUrl}}/compras/1"
           }
         }
       ]
