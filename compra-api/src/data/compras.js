@@ -1,7 +1,18 @@
 // "Base de datos" en memoria: las compras viven mientras el proceso esté corriendo.
-const compras = [];
+// Seed inicial: una compra de ejemplo para que la API arranque con datos mínimos.
+// El cliente y el producto referenciados existen en los seeds de sus respectivas APIs.
+const compras = [
+  {
+    id: 1,
+    clienteId: "44bb26f4-6da4-4153-8d21-2f288c4af537",
+    productoId: 1,
+    cantidad: 1,
+    total: 180000,
+    fecha: "2026-10-01T10:00:00.000Z"
+  }
+];
 
-let siguienteId = 1;
+let siguienteId = 2;
 
 function listar() {
   return compras;
