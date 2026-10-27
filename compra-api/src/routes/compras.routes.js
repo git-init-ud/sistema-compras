@@ -1,41 +1,61 @@
 const express = require("express");
 const router = express.Router();
-const db = require("../db");
+const {
+  listar,
+  buscarPorId,
+  crear,
+  actualizar,
+  eliminar,
+  tieneComprasDeCliente,
+  tieneComprasDeProducto
+} = require("../data/compras");
 const { obtenerCliente } = require("../services/clienteService");
 const { obtenerProducto } = require("../services/productoService");
 
-const COLUMNAS =
-  "id, cliente_id AS \"clienteId\", producto_id AS \"productoId\", cantidad, total::float8 AS total, fecha";
+function redondearTotal(valor) {
+  return Math.round(valor * 100) / 100;
+}
+
+// GET /compras/cliente/:clienteId
+// Endpoint interno que usa cliente-api para saber si puede eliminar un cliente.
+router.get("/cliente/:clienteId", (req, res) => {
+  res.status(200).json({
+    tieneCompras: tieneComprasDeCliente(req.params.clienteId)
+  });
+});
+
+// GET /compras/producto/:productoId
+// Endpoint interno que usa producto-api para saber si puede eliminar un producto.
+router.get("/producto/:productoId", (req, res) => {
+  const productoId = Number(req.params.productoId);
+
+  res.status(200).json({
+    tieneCompras: Number.isInteger(productoId)
+      ? tieneComprasDeProducto(productoId)
+      : false
+  });
+});
 
 // GET /compras
-router.get("/", async (req, res, next) => {
-  try {
-    const { rows } = await db.query(`SELECT ${COLUMNAS} FROM compras ORDER BY id`);
-    res.status(200).json(rows);
-  } catch (error) {
-    next(error);
-  }
+router.get("/", (req, res) => {
+  res.status(200).json(listar());
 });
 
 // GET /compras/:id
-router.get("/:id", async (req, res, next) => {
+router.get("/:id", (req, res) => {
   const id = Number(req.params.id);
 
   if (!Number.isInteger(id)) {
     return res.status(404).json({ mensaje: "Compra no encontrada" });
   }
 
-  try {
-    const { rows } = await db.query(`SELECT ${COLUMNAS} FROM compras WHERE id = $1`, [id]);
+  const compra = buscarPorId(id);
 
-    if (rows.length === 0) {
-      return res.status(404).json({ mensaje: "Compra no encontrada" });
-    }
-
-    res.status(200).json(rows[0]);
-  } catch (error) {
-    next(error);
+  if (!compra) {
+    return res.status(404).json({ mensaje: "Compra no encontrada" });
   }
+
+  res.status(200).json(compra);
 });
 
 // POST /compras
@@ -46,6 +66,14 @@ router.post("/", async (req, res, next) => {
     return res.status(400).json({
       mensaje: "Los campos 'clienteId', 'productoId' y 'cantidad' son obligatorios"
     });
+  }
+
+  const cantidadNumero = Number(cantidad);
+
+  if (!Number.isInteger(cantidadNumero) || cantidadNumero <= 0) {
+    return res
+      .status(400)
+      .json({ mensaje: "'cantidad' debe ser un entero mayor que 0" });
   }
 
   let cliente;
@@ -69,19 +97,21 @@ router.post("/", async (req, res, next) => {
     return res.status(404).json({ mensaje: `El producto ${productoId} no existe` });
   }
 
-  if (producto.stock < cantidad) {
+  if (producto.stock < cantidadNumero) {
     return res.status(400).json({
-      mensaje: `Stock insuficiente. Disponible: ${producto.stock}, solicitado: ${cantidad}`
+      mensaje: `Stock insuficiente. Disponible: ${producto.stock}, solicitado: ${cantidadNumero}`
     });
   }
 
   try {
-    const { rows } = await db.query(
-      `INSERT INTO compras (cliente_id, producto_id, cantidad, total)
-       VALUES ($1, $2, $3, $4) RETURNING ${COLUMNAS}`,
-      [cliente.id, producto.id, cantidad, producto.precio * cantidad]
-    );
-    res.status(201).json(rows[0]);
+    const compra = crear({
+      clienteId: cliente.id,
+      productoId: producto.id,
+      cantidad: cantidadNumero,
+      total: redondearTotal(producto.precio * cantidadNumero)
+    });
+
+    res.status(201).json(compra);
   } catch (error) {
     next(error);
   }
@@ -103,6 +133,14 @@ router.put("/:id", async (req, res, next) => {
     });
   }
 
+  const cantidadNumero = Number(cantidad);
+
+  if (!Number.isInteger(cantidadNumero) || cantidadNumero <= 0) {
+    return res
+      .status(400)
+      .json({ mensaje: "'cantidad' debe ser un entero mayor que 0" });
+  }
+
   let cliente;
   let producto;
 
@@ -124,51 +162,48 @@ router.put("/:id", async (req, res, next) => {
     return res.status(404).json({ mensaje: `El producto ${productoId} no existe` });
   }
 
-  if (producto.stock < cantidad) {
+  if (producto.stock < cantidadNumero) {
     return res.status(400).json({
-      mensaje: `Stock insuficiente. Disponible: ${producto.stock}, solicitado: ${cantidad}`
+      mensaje: `Stock insuficiente. Disponible: ${producto.stock}, solicitado: ${cantidadNumero}`
     });
   }
 
   try {
-    const { rows } = await db.query(
-      `UPDATE compras SET cliente_id = $1, producto_id = $2, cantidad = $3, total = $4
-       WHERE id = $5 RETURNING ${COLUMNAS}`,
-      [cliente.id, producto.id, cantidad, producto.precio * cantidad, id]
-    );
+    const compra = buscarPorId(id);
 
-    if (rows.length === 0) {
+    if (!compra) {
       return res.status(404).json({ mensaje: "Compra no encontrada" });
     }
 
-    res.status(200).json(rows[0]);
+    actualizar(compra, {
+      clienteId: cliente.id,
+      productoId: producto.id,
+      cantidad: cantidadNumero,
+      total: redondearTotal(producto.precio * cantidadNumero)
+    });
+
+    res.status(200).json(compra);
   } catch (error) {
     next(error);
   }
 });
 
 // DELETE /compras/:id
-router.delete("/:id", async (req, res, next) => {
+router.delete("/:id", (req, res) => {
   const id = Number(req.params.id);
 
   if (!Number.isInteger(id)) {
     return res.status(404).json({ mensaje: "Compra no encontrada" });
   }
 
-  try {
-    const { rows } = await db.query(
-      "DELETE FROM compras WHERE id = $1 RETURNING id",
-      [id]
-    );
+  const compra = buscarPorId(id);
 
-    if (rows.length === 0) {
-      return res.status(404).json({ mensaje: "Compra no encontrada" });
-    }
-
-    res.status(200).json({ mensaje: "Compra eliminada" });
-  } catch (error) {
-    next(error);
+  if (!compra) {
+    return res.status(404).json({ mensaje: "Compra no encontrada" });
   }
+
+  eliminar(compra);
+  res.status(200).json({ mensaje: "Compra eliminada" });
 });
 
 module.exports = router;

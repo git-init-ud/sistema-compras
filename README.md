@@ -43,7 +43,8 @@ npm run dev
 ```
 
 `compra-api` lee las URLs de `cliente-api` y `producto-api` desde variables de entorno
-(`CLIENTE_API_URL`, `PRODUCTO_API_URL`), nunca las tiene fijas en el código.
+(`CLIENTE_API_URL`, `PRODUCTO_API_URL`), nunca las tiene fijas en el código. `cliente-api` y
+`producto-api` leen `COMPRA_API_URL` para verificar si un recurso tiene compras antes de eliminarlo.
 
 ## Pruebas
 
@@ -57,31 +58,20 @@ servicio caído (con `producto-api` detenida).
   consultar al otro servicio".
 - El total de la compra se calcula con el precio que devuelve `producto-api`, nunca con un valor
   enviado por el cliente de la API.
+- Al eliminar un cliente o un producto, la API correspondiente consulta a `compra-api` para no
+  dejar compras huérfanas. Si tiene compras asociadas responde `409`; si `compra-api` no está
+  disponible responde `503`.
 
-## Base de datos local (PostgreSQL)
+## Datos en memoria
 
-Un solo clúster local (sin Docker) con la base `compras_db` y tres tablas: `clientes` (id UUID), `productos` y `compras` (ids incrementales). `compras` no tiene FK a propósito: `compra-api` valida cliente y producto por HTTP.
+El proyecto **no usa PostgreSQL**. Cada API guarda sus datos en arreglos dentro del código
+(`src/data/`), así que no hay que instalar ni levantar ningún motor de base de datos:
 
-```bash
-# macOS (requiere PostgreSQL: brew install postgresql@18)
-db/setup-local-db-mac.sh                               # clúster en db/pgdata, puerto 5440, schema + seed
-db/setup-local-db-mac.sh stop                          # apagar
+| Servicio      | Archivo                    | Datos iniciales |
+| ------------- | -------------------------- | --------------- |
+| `cliente-api` | `src/data/clientes.js`     | Laura Gómez y Andrés Ruiz (UUID fijos, los mismos de Postman) |
+| `producto-api`| `src/data/productos.js`    | Teclado mecánico y Mouse inalámbrico |
+| `compra-api`  | `src/data/compras.js`      | Arreglo vacío |
 
-# Linux
-db/setup-local-db.sh
-```
-
-```powershell
-# Windows, en PowerShell normal (no usar "Run as administrator")
-powershell -ExecutionPolicy Bypass -File db\setup-local-db-windows.ps1
-powershell -ExecutionPolicy Bypass -File db\setup-local-db-windows.ps1 stop
-```
-
-```bash
-psql -h 127.0.0.1 -p 5440 -U postgres -d compras_db    # entrar
-```
-
-Si los scripts no están disponibles o fallan, el procedimiento manual paso a paso está en
-[`db/README.md`](db/README.md).
-
-Cada API lee `DATABASE_URL` (ver `.env.example`).
+Los cambios (crear, actualizar o eliminar) se mantienen mientras el proceso esté corriendo.
+Al reiniciar un servicio, sus datos vuelven al estado inicial.

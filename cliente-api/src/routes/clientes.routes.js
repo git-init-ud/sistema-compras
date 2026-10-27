@@ -1,45 +1,43 @@
 const express = require("express");
 const router = express.Router();
-const db = require("../db");
+const {
+  listar,
+  buscarPorId,
+  buscarPorEmail,
+  crear,
+  actualizar,
+  eliminar
+} = require("../data/clientes");
+const { clienteTieneCompras } = require("../services/compraService");
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
+function aRespuesta(cliente) {
+  return { id: cliente.id, nombre: cliente.nombre, email: cliente.email };
+}
+
 // GET /clientes
-router.get("/", async (req, res, next) => {
-  try {
-    const { rows } = await db.query(
-      "SELECT id, nombre, email FROM clientes ORDER BY created_at"
-    );
-    res.status(200).json(rows);
-  } catch (error) {
-    next(error);
-  }
+router.get("/", (req, res) => {
+  res.status(200).json(listar().map(aRespuesta));
 });
 
 // GET /clientes/:id
-router.get("/:id", async (req, res, next) => {
-  try {
-    if (!UUID_RE.test(req.params.id)) {
-      return res.status(404).json({ mensaje: "Cliente no encontrado" });
-    }
-
-    const { rows } = await db.query(
-      "SELECT id, nombre, email FROM clientes WHERE id = $1",
-      [req.params.id]
-    );
-
-    if (rows.length === 0) {
-      return res.status(404).json({ mensaje: "Cliente no encontrado" });
-    }
-
-    res.status(200).json(rows[0]);
-  } catch (error) {
-    next(error);
+router.get("/:id", (req, res) => {
+  if (!UUID_RE.test(req.params.id)) {
+    return res.status(404).json({ mensaje: "Cliente no encontrado" });
   }
+
+  const cliente = buscarPorId(req.params.id);
+
+  if (!cliente) {
+    return res.status(404).json({ mensaje: "Cliente no encontrado" });
+  }
+
+  res.status(200).json(aRespuesta(cliente));
 });
 
 // POST /clientes
-router.post("/", async (req, res, next) => {
+router.post("/", (req, res) => {
   const { nombre, email } = req.body;
 
   if (!nombre || !email) {
@@ -48,51 +46,42 @@ router.post("/", async (req, res, next) => {
       .json({ mensaje: "Los campos 'nombre' y 'email' son obligatorios" });
   }
 
-  try {
-    const { rows } = await db.query(
-      "INSERT INTO clientes (nombre, email) VALUES ($1, $2) RETURNING id, nombre, email",
-      [nombre, email]
-    );
-    res.status(201).json(rows[0]);
-  } catch (error) {
-    if (error.code === "23505") {
-      return res.status(409).json({ mensaje: `El email ${email} ya está registrado` });
-    }
-    next(error);
+  if (buscarPorEmail(email)) {
+    return res.status(409).json({ mensaje: `El email ${email} ya está registrado` });
   }
+
+  const cliente = crear({ nombre, email });
+  res.status(201).json(aRespuesta(cliente));
 });
 
 // PUT /clientes/:id
-router.put("/:id", async (req, res, next) => {
-  try {
-    if (!UUID_RE.test(req.params.id)) {
-      return res.status(404).json({ mensaje: "Cliente no encontrado" });
-    }
-
-    const { nombre, email } = req.body;
-
-    if (!nombre || !email) {
-      return res
-        .status(400)
-        .json({ mensaje: "Los campos 'nombre' y 'email' son obligatorios" });
-    }
-
-    const { rows } = await db.query(
-      "UPDATE clientes SET nombre = $1, email = $2 WHERE id = $3 RETURNING id, nombre, email",
-      [nombre, email, req.params.id]
-    );
-
-    if (rows.length === 0) {
-      return res.status(404).json({ mensaje: "Cliente no encontrado" });
-    }
-
-    res.status(200).json(rows[0]);
-  } catch (error) {
-    if (error.code === "23505") {
-      return res.status(409).json({ mensaje: `El email ${req.body.email} ya está registrado` });
-    }
-    next(error);
+router.put("/:id", (req, res) => {
+  if (!UUID_RE.test(req.params.id)) {
+    return res.status(404).json({ mensaje: "Cliente no encontrado" });
   }
+
+  const { nombre, email } = req.body;
+
+  if (!nombre || !email) {
+    return res
+      .status(400)
+      .json({ mensaje: "Los campos 'nombre' y 'email' son obligatorios" });
+  }
+
+  const cliente = buscarPorId(req.params.id);
+
+  if (!cliente) {
+    return res.status(404).json({ mensaje: "Cliente no encontrado" });
+  }
+
+  const existente = buscarPorEmail(email);
+
+  if (existente && existente.id !== cliente.id) {
+    return res.status(409).json({ mensaje: `El email ${email} ya está registrado` });
+  }
+
+  actualizar(cliente, { nombre, email });
+  res.status(200).json(aRespuesta(cliente));
 });
 
 // DELETE /clientes/:id
@@ -102,20 +91,32 @@ router.delete("/:id", async (req, res, next) => {
       return res.status(404).json({ mensaje: "Cliente no encontrado" });
     }
 
-    const { rows } = await db.query(
-      "DELETE FROM clientes WHERE id = $1 RETURNING id",
-      [req.params.id]
-    );
+    const cliente = buscarPorId(req.params.id);
 
-    if (rows.length === 0) {
+    if (!cliente) {
       return res.status(404).json({ mensaje: "Cliente no encontrado" });
     }
 
+    let tieneCompras;
+
+    try {
+      tieneCompras = await clienteTieneCompras(cliente.id);
+    } catch (error) {
+      return res.status(503).json({
+        mensaje: "No se pudo verificar si el cliente tiene compras asociadas",
+        detalle: error.message
+      });
+    }
+
+    if (tieneCompras) {
+      return res
+        .status(409)
+        .json({ mensaje: "No se puede eliminar: el cliente tiene compras asociadas" });
+    }
+
+    eliminar(cliente);
     res.status(200).json({ mensaje: "Cliente eliminado" });
   } catch (error) {
-    if (error.code === "23503") {
-      return res.status(409).json({ mensaje: "No se puede eliminar: el cliente tiene compras asociadas" });
-    }
     next(error);
   }
 });
